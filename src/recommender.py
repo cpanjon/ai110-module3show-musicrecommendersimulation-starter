@@ -101,58 +101,68 @@ def load_songs(csv_path: str) -> List[Dict]:
     return songs
 
 
-def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
+DEFAULT_WEIGHTS = {"genre": 2.0, "mood": 1.0, "energy": 1.0, "acoustic": 0.5}
+
+
+def score_song(user_prefs: Dict, song: Dict, weights: Dict = None) -> Tuple[float, List[str]]:
     """
     Scores a single song dict against user preference dict.
 
-    Algorithm Recipe
-    ----------------
+    Algorithm Recipe (default weights)
+    ------------------------------------
     +2.0  genre match        (strongest categorical signal)
     +1.0  mood match         (situational signal)
-    +0–1.0 energy proximity  (1.0 - |song.energy - target_energy|)
+    +0–1.0 energy proximity  (weight * (1.0 - |song.energy - target_energy|))
     +0.5  acousticness match (bonus when acoustic preference aligns)
 
-    Max possible score: 4.5
+    Max possible score with default weights: 4.5
 
+    Pass a custom `weights` dict to run experiments without editing this function.
     Required by recommend_songs() and src/main.py
     """
+    w = weights if weights is not None else DEFAULT_WEIGHTS
     score = 0.0
     reasons = []
 
-    # Genre match: +2.0
+    # Genre match
     if song['genre'] == user_prefs.get('genre', ''):
-        score += 2.0
-        reasons.append(f"genre match ({song['genre']})")
+        pts = w["genre"]
+        score += pts
+        reasons.append(f"genre match ({song['genre']}) +{pts:.1f}")
 
-    # Mood match: +1.0
+    # Mood match
     if song['mood'] == user_prefs.get('mood', ''):
-        score += 1.0
-        reasons.append(f"mood match ({song['mood']})")
+        pts = w["mood"]
+        score += pts
+        reasons.append(f"mood match ({song['mood']}) +{pts:.1f}")
 
-    # Energy proximity: up to +1.0
+    # Energy proximity
     target_energy = user_prefs.get('energy', 0.5)
     energy_sim = 1.0 - abs(song['energy'] - target_energy)
-    score += energy_sim
-    reasons.append(f"energy similarity {energy_sim:.2f}")
+    pts = w["energy"] * energy_sim
+    score += pts
+    reasons.append(f"energy similarity {energy_sim:.2f} +{pts:.2f}")
 
-    # Acousticness preference: +0.5
+    # Acousticness preference
     likes_acoustic = user_prefs.get('likes_acoustic', False)
     song_is_acoustic = song['acousticness'] >= 0.6
     if song_is_acoustic == likes_acoustic:
-        score += 0.5
-        reasons.append("acousticness preference match")
+        pts = w["acoustic"]
+        score += pts
+        reasons.append(f"acousticness match +{pts:.1f}")
 
     return score, reasons
 
 
-def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tuple[Dict, float, str]]:
+def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5, weights: Dict = None) -> List[Tuple[Dict, float, str]]:
     """
-    Scores every song, sorts by score descending, returns the top-k.
+    Scores every song using score_song, sorts by score descending, returns top-k.
+    Pass `weights` to override the default scoring weights for experiments.
     Required by src/main.py
     """
     scored = []
     for song in songs:
-        score, reasons = score_song(user_prefs, song)
+        score, reasons = score_song(user_prefs, song, weights=weights)
         explanation = ", ".join(reasons)
         scored.append((song, score, explanation))
 
