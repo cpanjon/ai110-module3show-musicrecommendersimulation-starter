@@ -11,23 +11,40 @@ Your goal is to:
 - Evaluate what your system gets right and wrong
 - Reflect on how this mirrors real world AI recommenders
 
-Replace this paragraph with your own summary of what your version does.
+This version scores each song against a user's taste profile using a weighted formula across five features: genre match, mood match, energy proximity, acousticness preference, and tempo proximity. Numerical features like energy and tempo are scored using a proximity penalty — rewarding songs that are close to the user's target, not just songs with high or low values. The top-k songs are then ranked by their final score and returned with a plain-language explanation of why each one was recommended.
 
 ---
 
 ## How The System Works
 
-Explain your design in plain language.
+Each `Song` stores: `genre`, `mood`, `energy`, `tempo_bpm`, `valence`, `danceability`, `acousticness`.
 
-Some prompts to answer:
+The `UserProfile` stores: `favorite_genre`, `favorite_mood`, `target_energy`, `likes_acoustic`.
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+Scoring recipe (max score = 4.5):
 
-You can include a simple diagram or bullet list if helpful.
+| Rule | Points |
+|---|---|
+| Genre match | +2.0 |
+| Mood match | +1.0 |
+| Energy proximity `1.0 - \|song.energy - target\|` | +0.0 – 1.0 |
+| Acousticness preference match | +0.5 |
+
+The top-k songs by score are returned with a plain-language explanation.
+
+### Data Flow
+
+```mermaid
+flowchart TD
+    A[data/songs.csv] -->|load_songs| B[List of Song Dicts]
+    C[User Taste Profile\ngenre · mood · energy · likes_acoustic] --> D
+    B --> D{Score Loop\nfor each song in catalog}
+    D --> E[score_song\n+2.0 genre match\n+1.0 mood match\n+0–1.0 energy proximity\n+0.5 acousticness match]
+    E --> F[song · total_score · reasons]
+    F --> G[Sort all songs\nby score descending]
+    G --> H[Slice top-K results]
+    H --> I[Output\ntitle · score · explanation]
+```
 
 ---
 

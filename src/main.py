@@ -1,32 +1,39 @@
 """
 Command line runner for the Music Recommender Simulation.
 
-This file helps you quickly run and test your recommender.
-
-You will implement the functions in recommender.py:
-- load_songs
-- score_song
-- recommend_songs
+Run with:
+    python -m src.main
 """
 
-from recommender import load_songs, recommend_songs
+from src.recommender import load_songs, recommend_songs
 
 
 def main() -> None:
-    songs = load_songs("data/songs.csv") 
+    songs = load_songs("data/songs.csv")
+    print(f"Loaded songs: {len(songs)}")
 
-    # Starter example profile
-    user_prefs = {"genre": "pop", "mood": "happy", "energy": 0.8}
+    # User taste profile — all features the scoring rule uses
+    user_prefs = {
+        "genre": "rock",          # favorite genre
+        "mood": "intense",        # favorite mood
+        "energy": 0.85,           # target energy (0.0 = very calm, 1.0 = very intense)
+        "tempo_bpm": 140,         # target tempo in bpm
+        "valence": 0.50,          # target positivity (0.0 = dark, 1.0 = upbeat)
+        "danceability": 0.65,     # target danceability
+        "acousticness": 0.10,     # target acousticness
+        "likes_acoustic": False,  # acoustic preference flag
+    }
+
+    print(f"\nProfile: genre={user_prefs['genre']} | mood={user_prefs['mood']} | energy={user_prefs['energy']}\n")
+    print("-" * 55)
 
     recommendations = recommend_songs(user_prefs, songs, k=5)
 
-    print("\nTop recommendations:\n")
-    for rec in recommendations:
-        # You decide the structure of each returned item.
-        # A common pattern is: (song, score, explanation)
-        song, score, explanation = rec
-        print(f"{song['title']} - Score: {score:.2f}")
-        print(f"Because: {explanation}")
+    print(f"\nTop {len(recommendations)} Recommendations\n")
+    for rank, (song, score, explanation) in enumerate(recommendations, start=1):
+        print(f"  {rank}. {song['title']} by {song['artist']}")
+        print(f"     Score : {score:.2f} / 4.50")
+        print(f"     Why   : {explanation}")
         print()
 
 
